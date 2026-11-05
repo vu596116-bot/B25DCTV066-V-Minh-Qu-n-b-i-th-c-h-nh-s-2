@@ -1,1 +1,120 @@
+import React, { useState, useRef, useContext, createContext } from 'react';
+import { useFetch } from './useFetch';
+import { useClock } from './useClock';
 
+const ThemeContext = createContext();
+
+export default function App() {
+  const [theme, setTheme] = useState('light');
+  const time = useClock();
+  const { data: expenses, loading, error, addExpense, removeExpense } = useFetch();
+  
+  const [filterCategory, setFilterCategory] = useState('Tất cả');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const contentRef = useRef(null);
+  const [content, setContent] = useState('');
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('Ăn uống');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!content.trim() || !amount || Number(amount) <= 0) {
+      alert('Vui lòng nhập thông tin hợp lệ!');
+      return;
+    }
+
+    await addExpense({ content, amount: Number(amount), category, date });
+    setContent('');
+    setAmount('');
+    contentRef.current.focus(); 
+  };
+
+  if (loading) return <div>Đang tải dữ liệu...</div>;
+  if (error) return <div>Lỗi: {error}</div>;
+
+  const filtered = expenses.filter(item => {
+    const matchesCategory = filterCategory === 'Tất cả' || item.category === filterCategory;
+    const matchesSearch = item.content.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const totalAmount = filtered.reduce((sum, item) => sum + Number(item.amount), 0);
+
+  const themeStyles = {
+    background: theme === 'light' ? '#fff' : '#222',
+    color: theme === 'light' ? '#000' : '#fff',
+    minHeight: '100vh',
+    padding: '20px'
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light') }}>
+      <div style={themeStyles}>
+        <Header time={time} />
+
+        <form onSubmit={handleSubmit} style={{ margin: '20px 0', padding: '15px', border: '1px solid gray' }}>
+          <h3>Thêm khoản chi (Function Component)</h3>
+          <input 
+            ref={contentRef}
+            type="text" 
+            placeholder="Nội dung" 
+            value={content} 
+            onChange={e => setContent(e.target.value)} 
+          />
+          <input 
+            type="number" 
+            placeholder="Số tiền" 
+            value={amount} 
+            onChange={e => setAmount(e.target.value)} 
+            style={{ marginLeft: '10px' }}
+          />
+          <select value={category} onChange={e => setCategory(e.target.value)} style={{ marginLeft: '10px' }}>
+            <option value="Ăn uống">Ăn uống</option>
+            <option value="Đi lại">Đi lại</option>
+            <option value="Học tập">Học tập</option>
+            <option value="Giải trí">Giải trí</option>
+          </select>
+          <input 
+            type="date" 
+            value={date} 
+            onChange={e => setDate(e.target.value)} 
+            style={{ marginLeft: '10px' }}
+          />
+          <button type="submit" style={{ marginLeft: '10px' }}>Thêm</button>
+        </form>
+
+        <div style={{ margin: '15px 0' }}>
+          <input 
+            type="text" 
+            placeholder="Tìm kiếm nội dung..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <ul>
+          {filtered.map(item => (
+            <li key={item.id}>
+              {item.date} - {item.content} - {Number(item.amount).toLocaleString()} VND ({item.category})
+              <button onClick={() => removeExpense(item.id)} style={{ marginLeft: '10px' }}>Xóa</button>
+            </li>
+          ))}
+        </ul>
+
+        <h4>Tổng tiền: {totalAmount.toLocaleString()} VND</h4>
+      </div>
+    </ThemeContext.Provider>
+  );
+}
+
+function Header({ time }) {
+  const { theme, toggleTheme } = useContext(ThemeContext);
+  return (
+    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <h2>Sổ Chi Tiêu (Hooks) - {time.toLocaleTimeString()}</h2>
+      <button onClick={toggleTheme}>Giao diện: {theme === 'light' ? '🌙 Tối' : '☀️ Sáng'}</button>
+    </header>
+  );
+}
