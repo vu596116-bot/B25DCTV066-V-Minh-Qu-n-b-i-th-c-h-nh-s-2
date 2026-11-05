@@ -1,1 +1,44 @@
+import { useState, useEffect } from 'react';
 
+const API_URL = 'https://65b61409da3a3c16ab002123.mockapi.io/api/v1/expenses'; 
+
+export function useFetch() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchExpenses = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error('Không thể tải dữ liệu từ API');
+      const json = await res.json();
+      setData(json);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
+
+  const addExpense = async (newItem) => {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem)
+    });
+    const created = await res.json();
+    setData(prev => [...prev, created]);
+  };
+
+  const removeExpense = async (id) => {
+    await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+    setData(prev => prev.filter(item => item.id !== id));
+  };
+
+  return { data, loading, error, addExpense, removeExpense };
+}
