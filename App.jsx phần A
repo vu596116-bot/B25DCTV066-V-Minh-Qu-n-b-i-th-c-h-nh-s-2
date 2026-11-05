@@ -1,1 +1,172 @@
+import React, { Component } from 'react';
+import Clock from './Clock';
 
+class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      expenses: [
+        { id: 1, content: 'Ăn sáng phở bò', amount: 40000, category: 'Ăn uống', date: '2026-11-05' },
+        { id: 2, content: 'Xe buýt tháng', amount: 100000, category: 'Đi lại', date: '2026-11-04' }
+      ],
+      filterCategory: 'Tất cả',
+      content: '',
+      amount: '',
+      category: 'Ăn uống',
+      date: new Date().toISOString().split('T')[0]
+    };
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.expenses !== this.state.expenses) {
+      const total = this.state.expenses.reduce((sum, item) => sum + Number(item.amount), 0);
+      document.title = `Tổng chi: ${total.toLocaleString()} VND`;
+    }
+  }
+
+  handleChange = (e) => {
+    this.setState({ [e.target.name]: e.target.value });
+  };
+
+  handleSubmit = (e) => {
+    e.preventDefault();
+    const { content, amount, category, date } = this.state;
+    
+    if (!content.trim() || !amount || Number(amount) <= 0) {
+      alert('Vui lòng nhập đầy đủ nội dung và số tiền hợp lệ (> 0)!');
+      return;
+    }
+
+    const newExpense = {
+      id: Date.now(),
+      content,
+      amount: Number(amount),
+      category,
+      date
+    };
+
+    this.setState(prevState => ({
+      expenses: [...prevState.expenses, newExpense],
+      content: '',
+      amount: ''
+    }));
+  };
+
+  handleDelete = (id) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa khoản chi này?')) {
+      this.setState(prevState => ({
+        expenses: prevState.expenses.filter(item => item.id !== id)
+      }));
+    }
+  };
+
+  handleFilterChange = (category) => {
+    this.setState({ filterCategory: category });
+  };
+
+  render() {
+    const { expenses, filterCategory, content, amount, category, date } = this.state;
+    
+    const filteredExpenses = filterCategory === 'Tất cả' 
+      ? expenses 
+      : expenses.filter(item => item.category === filterCategory);
+
+    const totalAmount = filteredExpenses.reduce((sum, item) => sum + item.amount, 0);
+    const categories = ['Tất cả', 'Ăn uống', 'Đi lại', 'Học tập', 'Giải trí'];
+
+    return (
+      <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>Sổ Chi Tiêu Cá Nhân (Class Component)</h2>
+          <Clock />
+        </header>
+
+        {/* Form thêm khoản chi */}
+        <form onSubmit={this.handleSubmit} style={{ margin: '20px 0', padding: '15px', border: '1px solid #ccc' }}>
+          <h3>Thêm khoản chi mới</h3>
+          <div>
+            <input 
+              type="text" 
+              name="content" 
+              placeholder="Nội dung" 
+              value={content} 
+              onChange={this.handleChange} 
+            />
+          </div>
+          <div style={{ marginTop: '10px' }}>
+            <input 
+              type="number" 
+              name="amount" 
+              placeholder="Số tiền (VND)" 
+              value={amount} 
+              onChange={this.handleChange} 
+            />
+          </div>
+          <div style={{ marginTop: '10px' }}>
+            <select name="category" value={category} onChange={this.handleChange}>
+              <option value="Ăn uống">Ăn uống</option>
+              <option value="Đi lại">Đi lại</option>
+              <option value="Học tập">Học tập</option>
+              <option value="Giải trí">Giải trí</option>
+            </select>
+          </div>
+          <div style={{ marginTop: '10px' }}>
+            <input 
+              type="date" 
+              name="date" 
+              value={date} 
+              onChange={this.handleChange} 
+            />
+          </div>
+          <button type="submit" style={{ marginTop: '10px' }}>Thêm khoản chi</button>
+        </form>
+
+        {/* Bộ lọc theo loại */}
+        <div style={{ margin: '15px 0' }}>
+          <strong>Lọc theo loại: </strong>
+          {categories.map(cat => (
+            <button 
+              key={cat} 
+              onClick={() => this.handleFilterChange(cat)}
+              style={{ marginRight: '5px', fontWeight: filterCategory === cat ? 'bold' : 'normal' }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Danh sách khoản chi */}
+        <table border="1" cellPadding="8" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Nội dung</th>
+              <th>Số tiền</th>
+              <th>Loại</th>
+              <th>Ngày</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredExpenses.map((item, index) => (
+              <tr key={item.id}>
+                <td>{index + 1}</td>
+                <td>{item.content}</td>
+                <td>{item.amount.toLocaleString()} VND</td>
+                <td>{item.category}</td>
+                <td>{item.date}</td>
+                <td>
+                  <button onClick={() => this.handleDelete(item.id)}>Xóa</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <h3 style={{ marginTop: '15px' }}>Tổng tiền ({filterCategory}): {totalAmount.toLocaleString()} VND</h3>
+      </div>
+    );
+  }
+}
+
+export default App;
